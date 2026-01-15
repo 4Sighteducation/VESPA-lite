@@ -41,6 +41,12 @@ export default async function handler(req, res) {
   }
   if (!requireEnv(res)) return
 
+  const fail = (stage, error, status = 400) => {
+    const message =
+      error?.message || (typeof error === 'string' ? error : 'Unknown error')
+    return json(res, status, { error: message, stage })
+  }
+
   try {
     const {
       organisationName,
@@ -87,7 +93,7 @@ export default async function handler(req, res) {
       .single()
 
     if (estError) {
-      return json(res, 400, { error: estError.message })
+      return fail('create_establishment', estError)
     }
 
     const { data: user, error: userError } = await supabase.auth.admin.createUser({
@@ -101,7 +107,7 @@ export default async function handler(req, res) {
     })
 
     if (userError) {
-      return json(res, 400, { error: userError.message })
+      return fail('create_auth_user', userError)
     }
 
     const userId = user.user?.id
@@ -113,15 +119,19 @@ export default async function handler(req, res) {
         first_name: primaryContactName.split(' ')[0] || primaryContactName,
         last_name: primaryContactName.split(' ').slice(1).join(' ') || null,
       })
-      await supabase.from('lite_staff_roles').insert({
+      const { error: roleError } = await supabase.from('lite_staff_roles').insert({
         user_id: userId,
         role_type: 'staff_admin',
         role_meta: { source: 'lite-registration' },
       })
+      if (roleError) {
+        return fail('create_staff_role', roleError)
+      }
     }
 
     sgMail.setApiKey(SENDGRID_API_KEY)
-    await sgMail.send({
+    try {
+      await sgMail.send({
       to: primaryContactEmail,
       from: 'support@vespa.academy',
       templateId: ORG_WELCOME_TEMPLATE_ID,
@@ -133,10 +143,13 @@ export default async function handler(req, res) {
         supportEmail: 'support@vespa.academy',
         ssoMessage: 'You can also sign in using Google or Microsoft on the login page.',
       },
-    })
+      })
+    } catch (sendgridError) {
+      return fail('sendgrid', sendgridError, 500)
+    }
 
     return json(res, 200, { ok: true, loginUrl })
   } catch (error) {
-    return json(res, 500, { error: error?.message || 'Unexpected error' })
+    return json(res, 500, { error: error?.message || 'Unexpected error', stage: 'unexpected' })
   }
 }
