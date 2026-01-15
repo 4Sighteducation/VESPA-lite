@@ -129,6 +129,7 @@ export default async function handler(req, res) {
         organisationName,
         loginUrl,
         password,
+        loginEmail: primaryContactEmail,
         supportEmail: 'support@vespa.academy',
         ssoMessage: 'You can also sign in using Google or Microsoft on the login page.',
       },
