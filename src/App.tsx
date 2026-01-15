@@ -6,6 +6,7 @@ import Resume from './routes/Resume'
 import StaffJoin from './routes/StaffJoin'
 import StaffPortal from './routes/StaffPortal'
 import Login from './routes/Login'
+import StaffAdmin from './routes/StaffAdmin'
 
 const LOGO_URL = 'https://vespa.academy/_astro/vespalogo.BGrK1ARl.png'
 
@@ -31,6 +32,7 @@ function App() {
           <Route path="/resume" element={<Resume />} />
           <Route path="/staff/join/:token" element={<StaffJoin />} />
           <Route path="/staff" element={<StaffPortal />} />
+          <Route path="/staff/admin" element={<StaffAdmin />} />
           <Route path="/login" element={<Login />} />
         </Routes>
       </main>
