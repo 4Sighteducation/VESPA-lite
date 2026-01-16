@@ -96,25 +96,29 @@ export default async function handler(req, res) {
     return json(res, 403, { error: 'Not authorised to add staff' })
   }
 
-  const { establishmentId, inviteMethod, staff, sendWelcomeEmail } = req.body || {}
-  if (!establishmentId || !Array.isArray(staff) || !inviteMethod) {
-    return json(res, 400, { error: 'Missing establishmentId, staff list, or inviteMethod' })
+  const { establishmentId: providedEstablishmentId, inviteMethod, staff, sendWelcomeEmail } = req.body || {}
+  if (!Array.isArray(staff) || !inviteMethod) {
+    return json(res, 400, { error: 'Missing staff list or inviteMethod' })
   }
 
+  let targetEstablishmentId = providedEstablishmentId
   if (!isSuperAdmin) {
     const profileResult = await getStaffProfile(user.id)
     if (profileResult.error) {
       return json(res, 500, { error: profileResult.error.message })
     }
-    if (!profileResult.profile || profileResult.profile.establishment_id !== establishmentId) {
-      return json(res, 403, { error: 'Establishment mismatch' })
+    if (!profileResult.profile?.establishment_id) {
+      return json(res, 403, { error: 'No establishment linked to user' })
     }
+    targetEstablishmentId = profileResult.profile.establishment_id
+  } else if (!targetEstablishmentId) {
+    return json(res, 400, { error: 'Super admins must supply establishmentId' })
   }
 
   const { data: establishment, error: establishmentError } = await supabase
     .from('establishments')
     .select('id, name')
-    .eq('id', establishmentId)
+    .eq('id', targetEstablishmentId)
     .single()
 
   if (establishmentError) {
@@ -191,7 +195,7 @@ export default async function handler(req, res) {
 
     const inviteToken = crypto.randomUUID()
     await supabase.from('lite_staff_invites').insert({
-      establishment_id: establishment.id,
+        establishment_id: establishment.id,
       invited_by_user_id: user.id,
       invite_method: inviteMethod,
       invite_token: inviteToken,

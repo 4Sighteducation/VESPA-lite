@@ -28,6 +28,8 @@ const roleOptions = [
 
 const StaffAdmin = () => {
   const [establishmentId, setEstablishmentId] = useState('')
+  const [selectedEstablishmentId, setSelectedEstablishmentId] = useState('')
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false)
   const [cycleLabel, setCycleLabel] = useState('Spring Pilot')
   const [activeStep, setActiveStep] = useState<WizardStep>('manual')
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle')
@@ -73,6 +75,31 @@ const StaffAdmin = () => {
   const getAccessToken = async () => {
     const { data } = await supabase.auth.getSession()
     return data.session?.access_token
+  }
+
+  const loadAdminContext = async () => {
+    const token = await getAccessToken()
+    if (!token) {
+      setProfileStatus('error')
+      setProfileMessage('Log in to access staff onboarding.')
+      return
+    }
+
+    const response = await fetch('/api/staff-admin-context', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    const payload = await response.json()
+    if (!response.ok) {
+      setProfileStatus('error')
+      setProfileMessage(payload?.error || 'Unable to load staff profile.')
+      return
+    }
+
+    setIsSuperAdmin(Boolean(payload.isSuperAdmin))
+    setEstablishmentId(payload.establishmentId || '')
+    setSelectedEstablishmentId(payload.establishmentId || '')
+    setStaffName(payload.staffName || '')
+    setProfileStatus('idle')
   }
 
   const parseCsv = async (file: File) => {
@@ -140,9 +167,10 @@ const StaffAdmin = () => {
       setErrorMessage('Log in to upload staff.')
       return
     }
-    if (!establishmentId) {
+    const targetEstablishmentId = isSuperAdmin ? selectedEstablishmentId : establishmentId
+    if (!targetEstablishmentId) {
       setStatus('error')
-      setErrorMessage('Enter an establishment ID first.')
+      setErrorMessage('Select an establishment first.')
       return
     }
     setStatus('loading')
@@ -156,7 +184,7 @@ const StaffAdmin = () => {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          establishmentId,
+          establishmentId: targetEstablishmentId,
           inviteMethod,
           sendWelcomeEmail: true,
           staff,
@@ -208,9 +236,10 @@ const StaffAdmin = () => {
       setQrMessage('Log in to generate QR invites.')
       return
     }
-    if (!establishmentId) {
+    const targetEstablishmentId = isSuperAdmin ? selectedEstablishmentId : establishmentId
+    if (!targetEstablishmentId) {
       setQrStatus('error')
-      setQrMessage('Enter an establishment ID first.')
+      setQrMessage('Select an establishment first.')
       return
     }
     setQrStatus('loading')
@@ -225,7 +254,7 @@ const StaffAdmin = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ establishmentId, cycleLabel, mode: 'staff_only' }),
+        body: JSON.stringify({ establishmentId: targetEstablishmentId, cycleLabel, mode: 'staff_only' }),
       })
       const payload = await response.json()
       if (!response.ok) {
@@ -243,46 +272,7 @@ const StaffAdmin = () => {
   }
 
   useEffect(() => {
-    let cancelled = false
-
-    const loadProfile = async () => {
-      setProfileStatus('loading')
-      setProfileMessage('')
-
-      const { data: authData, error: authError } = await supabase.auth.getUser()
-      if (cancelled) return
-
-      if (authError || !authData?.user) {
-        setProfileStatus('error')
-        setProfileMessage('Log in to auto-fill your establishment ID.')
-        return
-      }
-
-      const { data: profile, error: profileError } = await supabase
-        .from('lite_staff_profiles')
-        .select('establishment_id, first_name, last_name')
-        .eq('user_id', authData.user.id)
-        .maybeSingle()
-
-      if (cancelled) return
-
-      if (profileError || !profile) {
-        setProfileStatus('error')
-        setProfileMessage('Unable to load staff profile. You can paste the ID manually.')
-        return
-      }
-
-      setEstablishmentId(profile.establishment_id || '')
-      const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(' ')
-      setStaffName(fullName || authData.user.email || '')
-      setProfileStatus('idle')
-    }
-
-    loadProfile()
-
-    return () => {
-      cancelled = true
-    }
+    loadAdminContext()
   }, [])
 
   return (
@@ -317,20 +307,22 @@ const StaffAdmin = () => {
         </button>
       </div>
 
-      <div className="wizard-panel">
-        <label className="wizard-label">
-          Establishment ID
-          <input
-            required
-            value={establishmentId}
-            onChange={(e) => setEstablishmentId(e.target.value)}
-            placeholder="Paste establishment UUID"
-          />
-        </label>
-        <p className="wizard-help">
-          This is auto-filled for staff admins. Super admins can override to target another school.
-        </p>
-      </div>
+      {isSuperAdmin && (
+        <div className="wizard-panel">
+          <label className="wizard-label">
+            Select establishment (super admin)
+            <input
+              required
+              value={selectedEstablishmentId}
+              onChange={(e) => setSelectedEstablishmentId(e.target.value)}
+              placeholder="Paste establishment UUID"
+            />
+          </label>
+          <p className="wizard-help">
+            Super admins can target any school. Staff admins are auto-linked under the hood.
+          </p>
+        </div>
+      )}
 
       {activeStep === 'manual' && (
         <form className="form" onSubmit={handleManualSubmit}>

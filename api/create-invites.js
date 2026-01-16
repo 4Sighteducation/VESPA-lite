@@ -84,19 +84,23 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { establishmentId, cycleLabel, mode = 'both' } = req.body || {}
-    if (!establishmentId || !cycleLabel) {
-      return json(res, 400, { error: 'Missing establishmentId or cycleLabel' })
+    const { establishmentId: providedEstablishmentId, cycleLabel, mode = 'both' } = req.body || {}
+    if (!cycleLabel) {
+      return json(res, 400, { error: 'Missing cycleLabel' })
     }
 
+    let establishmentId = providedEstablishmentId
     if (!isSuperAdmin) {
       const profileResult = await getStaffProfile(user.id)
       if (profileResult.error) {
         return json(res, 500, { error: profileResult.error.message })
       }
-      if (!profileResult.profile || profileResult.profile.establishment_id !== establishmentId) {
-        return json(res, 403, { error: 'Establishment mismatch' })
+      if (!profileResult.profile?.establishment_id) {
+        return json(res, 403, { error: 'No establishment linked to user' })
       }
+      establishmentId = profileResult.profile.establishment_id
+    } else if (!establishmentId) {
+      return json(res, 400, { error: 'Super admins must supply establishmentId' })
     }
 
     const { data: existingCycle } = await supabase
