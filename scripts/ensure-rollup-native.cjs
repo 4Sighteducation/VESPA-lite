@@ -29,6 +29,25 @@ if (!pkg) {
   process.exit(0)
 }
 
-console.log(`[ensure-rollup-native] Installing ${pkg} (no-save) to avoid npm optionalDependencies bug...`)
-runShell(`npm install --no-save --no-audit --no-fund ${pkg}`)
+// If it's already present, do nothing (keeps builds fast and avoids extra network calls).
+try {
+  require.resolve(pkg)
+  console.log(`[ensure-rollup-native] ${pkg} already present; skipping install.`)
+  process.exit(0)
+} catch (_) {}
+
+// Pin to the currently installed rollup version to avoid mismatches.
+let rollupVersion = null
+try {
+  // eslint-disable-next-line import/no-extraneous-dependencies
+  rollupVersion = require('rollup/package.json').version
+} catch (_) {
+  // If rollup isn't resolvable yet, we still attempt install without a version.
+}
+
+const spec = rollupVersion ? `${pkg}@${rollupVersion}` : pkg
+console.log(
+  `[ensure-rollup-native] Installing ${spec} (no-save) to avoid npm optionalDependencies bug...`,
+)
+runShell(`npm install --no-save --no-audit --no-fund ${spec}`)
 
