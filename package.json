@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/ensure-rollup-native.cjs",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
@@ -18,7 +19,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
-    "@rollup/wasm-node": "^4.55.1",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
@@ -30,8 +30,5 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4"
-  },
-  "overrides": {
-    "rollup": "npm:@rollup/wasm-node"
   }
 }
