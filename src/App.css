@@ -78,6 +78,23 @@
   background: rgba(255, 255, 255, 0.06);
 }
 
+.sidebar-user {
+  margin-top: auto;
+}
+
+.user-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--panel-border);
+  background: rgba(0, 0, 0, 0.2);
+  font-size: 0.9rem;
+  color: var(--text);
+  word-break: break-word;
+}
+
 .nav-links {
   display: flex;
   gap: 16px;
