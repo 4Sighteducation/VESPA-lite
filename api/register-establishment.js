@@ -70,7 +70,7 @@ export default async function handler(req, res) {
     const loginUrl = `${APP_BASE_URL}/login`
     const knackId = `lite_${crypto.randomUUID()}`
     const nameParts = primaryContactName.trim().split(/\s+/)
-    const primaryContactLastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : primaryContactName
+    const primaryContactFirstName = nameParts[0] || primaryContactName
 
     const { data: establishment, error: estError } = await supabase
       .from('establishments')
@@ -142,9 +142,11 @@ export default async function handler(req, res) {
         loginUrl,
         password,
         loginEmail: primaryContactEmail,
-        primaryContactLastName,
+        primaryContactFirstName,
+        greetingName: primaryContactFirstName,
         supportEmail: 'support@vespa.academy',
         ssoMessage: 'You can also sign in using Google or Microsoft on the login page.',
+        isAdmin: true,
       },
       })
     } catch (sendgridError) {

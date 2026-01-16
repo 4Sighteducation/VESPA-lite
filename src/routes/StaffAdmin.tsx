@@ -26,6 +26,26 @@ const roleOptions = [
   { value: 'staff_admin', label: 'Staff Admin' },
 ]
 
+const normalizeRoleType = (value: string) => {
+  const v = (value || '').trim().toLowerCase()
+  if (!v) return ''
+  const cleaned = v.replace(/\s+/g, '_').replace(/-+/g, '_')
+  const aliases: Record<string, string> = {
+    tutor: 'tutor',
+    head_of_year: 'head_of_year',
+    headyear: 'head_of_year',
+    hoy: 'head_of_year',
+    subject_teacher: 'subject_teacher',
+    subject: 'subject_teacher',
+    teacher: 'subject_teacher',
+    head_of_department: 'head_of_department',
+    hod: 'head_of_department',
+    staff_admin: 'staff_admin',
+    admin: 'staff_admin',
+  }
+  return aliases[cleaned] || cleaned
+}
+
 const StaffAdmin = () => {
   const [establishmentId, setEstablishmentId] = useState('')
   const [selectedEstablishmentId, setSelectedEstablishmentId] = useState('')
@@ -150,7 +170,7 @@ const StaffAdmin = () => {
         email: row.email,
         firstName: row.first_name,
         lastName: row.last_name,
-        roleType: row.role_type,
+        roleType: normalizeRoleType(row.role_type),
         tutorGroup: row.tutor_group,
         yearGroup: row.year_group,
         subject: row.subject,
@@ -158,6 +178,14 @@ const StaffAdmin = () => {
     })
 
     return staffRows.filter((row) => row.email && row.roleType)
+  }
+
+  const updateCsvRow = (idx: number, patch: Partial<StaffInput>) => {
+    setCsvPreview((prev) => prev.map((row, i) => (i === idx ? { ...row, ...patch } : row)))
+  }
+
+  const removeCsvRow = (idx: number) => {
+    setCsvPreview((prev) => prev.filter((_row, i) => i !== idx))
   }
 
   const submitStaff = async (staff: StaffInput[], inviteMethod: 'manual' | 'csv') => {
@@ -407,6 +435,9 @@ const StaffAdmin = () => {
               Upload a CSV file with columns: email, first_name, last_name, role_type,
               tutor_group, year_group, subject.
             </p>
+            <p className="wizard-help">
+              Allowed <strong>role_type</strong> values: <code>tutor</code>, <code>head_of_year</code>, <code>subject_teacher</code>, <code>head_of_department</code>, <code>staff_admin</code>.
+            </p>
             <div className="wizard-actions">
               <button className="secondary" type="button" onClick={downloadTemplate}>
                 Download CSV template
@@ -418,6 +449,95 @@ const StaffAdmin = () => {
             </div>
             {csvMessage && <p className="success">{csvMessage}</p>}
           </div>
+
+          {csvPreview.length > 0 && (
+            <div className="wizard-panel">
+              <h3 className="csv-title">Preview (edit before upload)</h3>
+              <div className="csv-table-wrap">
+                <table className="csv-table">
+                  <thead>
+                    <tr>
+                      <th>Email</th>
+                      <th>First name</th>
+                      <th>Last name</th>
+                      <th>Role</th>
+                      <th>Tutor group</th>
+                      <th>Year group</th>
+                      <th>Subject</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {csvPreview.map((row, idx) => (
+                      <tr key={`${row.email}-${idx}`}>
+                        <td>
+                          <input
+                            value={row.email}
+                            onChange={(e) => updateCsvRow(idx, { email: e.target.value })}
+                            placeholder="name@school.org"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            value={row.firstName}
+                            onChange={(e) => updateCsvRow(idx, { firstName: e.target.value })}
+                            placeholder="First"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            value={row.lastName}
+                            onChange={(e) => updateCsvRow(idx, { lastName: e.target.value })}
+                            placeholder="Last"
+                          />
+                        </td>
+                        <td>
+                          <select
+                            value={row.roleType}
+                            onChange={(e) => updateCsvRow(idx, { roleType: e.target.value })}
+                          >
+                            <option value="">Select…</option>
+                            {roleOptions.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td>
+                          <input
+                            value={row.tutorGroup || ''}
+                            onChange={(e) => updateCsvRow(idx, { tutorGroup: e.target.value })}
+                            placeholder="12A"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            value={row.yearGroup || ''}
+                            onChange={(e) => updateCsvRow(idx, { yearGroup: e.target.value })}
+                            placeholder="Year 12"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            value={row.subject || ''}
+                            onChange={(e) => updateCsvRow(idx, { subject: e.target.value })}
+                            placeholder="English"
+                          />
+                        </td>
+                        <td>
+                          <button className="ghost" type="button" onClick={() => removeCsvRow(idx)}>
+                            Remove
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           <button className="primary" type="submit" disabled={status === 'loading'}>
             {status === 'loading' ? 'Uploading…' : 'Upload CSV and send welcome emails'}
           </button>

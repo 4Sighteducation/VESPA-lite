@@ -149,9 +149,11 @@ export default async function handler(req, res) {
         loginUrl: `${APP_BASE_URL}/login`,
         password,
         loginEmail: email,
-        primaryContactLastName: lastName,
+        primaryContactFirstName: firstName,
+        greetingName: firstName,
         supportEmail: 'support@vespa.academy',
         ssoMessage: 'You can also sign in using Google or Microsoft on the login page.',
+        isAdmin: roleType === 'staff_admin' || roleType === 'super_admin',
       },
     })
   } catch (emailError) {

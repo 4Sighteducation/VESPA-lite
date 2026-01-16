@@ -17,7 +17,7 @@
 <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f7fa; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;">
 	
 	<div style="display: none; font-size: 1px; color: #fefefe; line-height: 1px; font-family: Arial, sans-serif; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden;">
-		Your VESPA Lite admin account is ready.
+		Your VESPA account is ready.
 	</div>
 
 	<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f4f7fa;">
@@ -55,15 +55,28 @@
 								<tr>
 									<td style="padding-bottom: 25px;">
 										<p style="margin: 0; font-size: 18px; color: #333333; font-family: Arial, sans-serif; font-weight: bold;">
-											Hi {{primaryContactLastName}},
+											Hi {{#if greetingName}}{{greetingName}}{{else}}there{{/if}},
 										</p>
 									</td>
 								</tr>
 								<tr>
 									<td style="padding-bottom: 20px;">
 										<p style="margin: 0; font-size: 16px; line-height: 1.6; color: #555555; font-family: Arial, sans-serif;">
-											Your VESPA Lite admin account has been created. You can now onboard staff, invite students to the questionnaire, and access coaching reports.
+											Your VESPA account has now been created.
 										</p>
+									</td>
+								</tr>
+								<tr>
+									<td style="padding-bottom: 20px;">
+										{{#if isAdmin}}
+										<p style="margin: 0; font-size: 16px; line-height: 1.6; color: #555555; font-family: Arial, sans-serif;">
+											You can now onboard staff, invite students to the questionnaire, and access coaching reports.
+										</p>
+										{{else}}
+										<p style="margin: 0; font-size: 16px; line-height: 1.6; color: #555555; font-family: Arial, sans-serif;">
+											Please sign in to register your account with {{organisationName}}. Once students have completed the VESPA questionnaire you will be able to view all connected student scores and reports.
+										</p>
+										{{/if}}
 									</td>
 								</tr>
 							</table>
