@@ -1,5 +1,5 @@
 import './App.css'
-import { Link, Route, Routes } from 'react-router-dom'
+import { Link, Outlet, Route, Routes } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabaseClient'
 import Home from './routes/Home'
@@ -9,8 +9,75 @@ import StaffJoin from './routes/StaffJoin'
 import StaffPortal from './routes/StaffPortal'
 import Login from './routes/Login'
 import StaffAdmin from './routes/StaffAdmin'
+import StudentQuestionnaire from './routes/StudentQuestionnaire'
+import StudentReport from './routes/StudentReport'
 
 const LOGO_URL = 'https://vespa.academy/_astro/vespalogo.BGrK1ARl.png'
+
+function AppLayout({ userEmail, onLogout }: { userEmail: string | null; onLogout: () => void }) {
+  return (
+    <div className="app-shell">
+      <div className="app-body">
+        <aside className="sidebar">
+          <div className="brand">
+            <img src={LOGO_URL} alt="VESPA Academy" />
+            <span>VESPA Lite</span>
+          </div>
+          <div className="sidebar-section">
+            <span className="sidebar-label">Staff</span>
+            <nav className="sidebar-links">
+              <Link to="/staff">Dashboard</Link>
+              <Link to="/staff/admin">Account management</Link>
+            </nav>
+          </div>
+          <div className="sidebar-section">
+            <span className="sidebar-label">Access</span>
+            <nav className="sidebar-links">
+              <Link to="/login">Login</Link>
+              <Link to="/staff/join/demo">Staff join</Link>
+            </nav>
+          </div>
+          <div className="sidebar-section">
+            <span className="sidebar-label">Student (demo)</span>
+            <nav className="sidebar-links">
+              <Link to="/student/start/demo">Student start</Link>
+              <Link to="/student/questionnaire/demo">Questionnaire</Link>
+              <Link to="/student/report/demo">Report</Link>
+            </nav>
+          </div>
+          <div className="sidebar-section sidebar-user">
+            <span className="sidebar-label">Signed in</span>
+            <div className="user-card">
+              <span>{userEmail || 'Not signed in'}</span>
+              <button className="ghost" type="button" onClick={onLogout} disabled={!userEmail}>
+                Log out
+              </button>
+            </div>
+          </div>
+          <div className="sidebar-section">
+            <span className="sidebar-label">Admin</span>
+            <nav className="sidebar-links">
+              <Link to="/">Register a school</Link>
+            </nav>
+          </div>
+        </aside>
+
+        <main className="content">
+          <Outlet />
+          <footer className="footer">VESPA Lite pilot • app.vespa.academy</footer>
+        </main>
+      </div>
+    </div>
+  )
+}
+
+function StudentLayout() {
+  return (
+    <div className="student-layout">
+      <Outlet />
+    </div>
+  )
+}
 
 function App() {
   const [userEmail, setUserEmail] = useState<string | null>(null)
@@ -42,60 +109,22 @@ function App() {
   }
 
   return (
-    <div className="app-shell">
-      <div className="app-body">
-        <aside className="sidebar">
-          <div className="brand">
-            <img src={LOGO_URL} alt="VESPA Academy" />
-            <span>VESPA Lite</span>
-          </div>
-          <div className="sidebar-section">
-            <span className="sidebar-label">Staff</span>
-            <nav className="sidebar-links">
-              <Link to="/staff">Dashboard</Link>
-              <Link to="/staff/admin">Account management</Link>
-            </nav>
-          </div>
-          <div className="sidebar-section">
-            <span className="sidebar-label">Access</span>
-            <nav className="sidebar-links">
-              <Link to="/login">Login</Link>
-              <Link to="/staff/join/demo">Staff join</Link>
-              <Link to="/student/start/demo">Student start</Link>
-              <Link to="/resume">Resume</Link>
-            </nav>
-          </div>
-          <div className="sidebar-section sidebar-user">
-            <span className="sidebar-label">Signed in</span>
-            <div className="user-card">
-              <span>{userEmail || 'Not signed in'}</span>
-              <button className="ghost" type="button" onClick={handleLogout} disabled={!userEmail}>
-                Log out
-              </button>
-            </div>
-          </div>
-          <div className="sidebar-section">
-            <span className="sidebar-label">Admin</span>
-            <nav className="sidebar-links">
-              <Link to="/">Register a school</Link>
-            </nav>
-          </div>
-        </aside>
+    <Routes>
+      <Route element={<AppLayout userEmail={userEmail} onLogout={handleLogout} />}>
+        <Route path="/" element={<Home />} />
+        <Route path="/staff/join/:token" element={<StaffJoin />} />
+        <Route path="/staff" element={<StaffPortal />} />
+        <Route path="/staff/admin" element={<StaffAdmin />} />
+        <Route path="/login" element={<Login />} />
+      </Route>
 
-        <main className="content">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/student/start/:token" element={<StudentStart />} />
-            <Route path="/resume" element={<Resume />} />
-            <Route path="/staff/join/:token" element={<StaffJoin />} />
-            <Route path="/staff" element={<StaffPortal />} />
-            <Route path="/staff/admin" element={<StaffAdmin />} />
-            <Route path="/login" element={<Login />} />
-          </Routes>
-          <footer className="footer">VESPA Lite pilot • app.vespa.academy</footer>
-        </main>
-      </div>
-    </div>
+      <Route element={<StudentLayout />}>
+        <Route path="/student/start/:token" element={<StudentStart />} />
+        <Route path="/student/questionnaire/:token" element={<StudentQuestionnaire />} />
+        <Route path="/student/report/:token" element={<StudentReport />} />
+        <Route path="/resume" element={<Resume />} />
+      </Route>
+    </Routes>
   )
 }
 
