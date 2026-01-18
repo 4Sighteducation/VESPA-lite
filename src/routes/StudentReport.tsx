@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import './studentReport.css'
 
@@ -437,6 +437,10 @@ export default function StudentReport() {
   const [reflection, setReflection] = useState('')
   const [goals, setGoals] = useState('')
   const [showAnswers, setShowAnswers] = useState(false)
+  const [coachingContent, setCoachingContent] = useState<
+    Record<string, { statement_text?: string; questions?: string[]; coaching_comments?: string[]; suggested_tools?: string[] }>
+  >({})
+  const [coachingStatus, setCoachingStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
 
   const allScores: CycleScore[] = [
     { cycle: 1, vision: 7, effort: 6, systems: 5, practice: 6, attitude: 8, overall: 6, completion_date: '2026-01-15' },
@@ -445,40 +449,67 @@ export default function StudentReport() {
   const availableCycles = [1]
   const currentScores = allScores.find((s) => s.cycle === selectedCycle) || allScores[0]
 
-  const coachingContent = useMemo(() => {
-    return {
-      Vision: {
-        statement_text: 'You have a clear sense of direction, and you can strengthen this by setting short-term milestones.',
-        questions: ['What do you want to achieve this cycle?', 'What is one next step you can take this week?'],
-        coaching_comments: ['Help the student translate goals into weekly habits.'],
-        suggested_tools: ['Personal Compass', 'Roadmap'],
-      },
-      Effort: {
-        statement_text: 'Your effort is steady. Consistency will be the key lever for progress.',
-        questions: ['When do you work best?', 'What interrupts your study the most?'],
-        coaching_comments: ['Explore routines and barriers; agree a small, repeatable plan.'],
-        suggested_tools: ['Perfect Day'],
-      },
-      Systems: {
-        statement_text: 'Your organisation can improve with simple systems for tracking deadlines and tasks.',
-        questions: ['How do you track homework and deadlines?', 'What system could make this easier?'],
-        coaching_comments: ['Introduce a simple planner/checklist system.'],
-        suggested_tools: ['Study Planner'],
-      },
-      Practice: {
-        statement_text: 'You use some effective practice techniques. Increase retrieval and spacing for better results.',
-        questions: ['How often do you self-test?', 'How could you space revision more evenly?'],
-        coaching_comments: ['Model retrieval practice; plan spaced sessions.'],
-        suggested_tools: ['Roadmap'],
-      },
-      Attitude: {
-        statement_text: 'You show resilience. Keep building confidence through small wins and reflection.',
-        questions: ['What helps you bounce back after a setback?', 'What’s one belief you want to strengthen?'],
-        coaching_comments: ['Reframe setbacks; track small wins.'],
-        suggested_tools: ['Personal Compass'],
+  const student = useMemo(
+    () => ({
+      name: 'Student Name',
+      yearGroup: '12',
+      group: '12A',
+      establishment: 'TESTING SCHOOL 1',
+      logoUrl: 'https://www.vespa.academy/assets/images/full-trimmed-transparent-customcolor-1-832x947.png',
+    }),
+    [],
+  )
+
+  // Rule (as agreed): Year Group < 12 => Level 2; Year Group > 11 => Level 3.
+  const inferredLevel = useMemo(() => {
+    const yg = Number(String(student.yearGroup || '').trim())
+    if (Number.isFinite(yg) && yg < 12) return 'Level 2'
+    if (Number.isFinite(yg) && yg > 11) return 'Level 3'
+    return 'Level 3'
+  }, [student.yearGroup])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const payload = {
+      level: inferredLevel,
+      scores: {
+        Vision: currentScores.vision,
+        Effort: currentScores.effort,
+        Systems: currentScores.systems,
+        Practice: currentScores.practice,
+        Attitude: currentScores.attitude,
       },
     }
-  }, [])
+
+    async function load() {
+      try {
+        setCoachingStatus('loading')
+        const r = await fetch('/api/coaching-content', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        const data = await r.json()
+        if (!r.ok) throw new Error(data?.error || 'Failed to load coaching content')
+        if (!cancelled) {
+          setCoachingContent(data?.content || {})
+          setCoachingStatus('ready')
+        }
+      } catch (e: any) {
+        if (!cancelled) {
+          console.warn('[StudentReport] coaching content load failed:', e)
+          setCoachingContent({})
+          setCoachingStatus('error')
+        }
+      }
+    }
+
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [currentScores.attitude, currentScores.effort, currentScores.practice, currentScores.systems, currentScores.vision, inferredLevel])
 
   return (
     <div id="vespa-student-report">
@@ -493,13 +524,7 @@ export default function StudentReport() {
 
         <div className="report-container">
           <ReportHeader
-            student={{
-              name: 'Student Name',
-              yearGroup: '12',
-              group: '12A',
-              establishment: 'TESTING SCHOOL 1',
-              logoUrl: 'https://www.vespa.academy/assets/images/full-trimmed-transparent-customcolor-1-832x947.png',
-            }}
+            student={student}
             availableCycles={availableCycles}
             selectedCycle={selectedCycle}
             allScores={allScores}
@@ -524,6 +549,9 @@ export default function StudentReport() {
             </div>
           ) : null}
 
+          {coachingStatus === 'loading' ? (
+            <div style={{ padding: 18, color: '#666' }}>Loading coaching content…</div>
+          ) : null}
           <CoachingContent scores={currentScores} content={coachingContent} />
           <StudentResponse value={reflection} onChange={setReflection} />
           <StudentGoals value={goals} onChange={setGoals} />
