@@ -11,6 +11,7 @@ import Login from './routes/Login'
 import StaffAdmin from './routes/StaffAdmin'
 import StudentQuestionnaire from './routes/StudentQuestionnaire'
 import StudentReport from './routes/StudentReport'
+import StudentAccess from './routes/StudentAccess'
 
 const LOGO_URL = 'https://vespa.academy/_astro/vespalogo.BGrK1ARl.png'
 
@@ -40,6 +41,7 @@ function AppLayout({ userEmail, onLogout }: { userEmail: string | null; onLogout
           <div className="sidebar-section">
             <span className="sidebar-label">Student (demo)</span>
             <nav className="sidebar-links">
+              <Link to="/student/access">Student access</Link>
               <Link to="/student/start/demo">Student start</Link>
               <Link to="/student/questionnaire/demo">Questionnaire</Link>
               <Link to="/student/report/demo">Report</Link>
@@ -119,6 +121,7 @@ function App() {
       </Route>
 
       <Route element={<StudentLayout />}>
+        <Route path="/student/access" element={<StudentAccess />} />
         <Route path="/student/start/:token" element={<StudentStart />} />
         <Route path="/student/questionnaire/:token" element={<StudentQuestionnaire />} />
         <Route path="/student/report/:token" element={<StudentReport />} />
