@@ -9,6 +9,7 @@ import StaffJoin from './routes/StaffJoin'
 import StaffPortal from './routes/StaffPortal'
 import Login from './routes/Login'
 import StaffAdmin from './routes/StaffAdmin'
+import AdminCenter from './routes/AdminCenter'
 import StudentQuestionnaire from './routes/StudentQuestionnaire'
 import StudentReport from './routes/StudentReport'
 import StudentAccess from './routes/StudentAccess'
@@ -60,6 +61,7 @@ function AppLayout({ userEmail, onLogout }: { userEmail: string | null; onLogout
             <span className="sidebar-label">Admin</span>
             <nav className="sidebar-links">
               <Link to="/">Register a school</Link>
+              <Link to="/admin">Admin Center</Link>
             </nav>
           </div>
         </aside>
@@ -114,6 +116,7 @@ function App() {
     <Routes>
       <Route element={<AppLayout userEmail={userEmail} onLogout={handleLogout} />}>
         <Route path="/" element={<Home />} />
+        <Route path="/admin" element={<AdminCenter />} />
         <Route path="/staff/join/:token" element={<StaffJoin />} />
         <Route path="/staff" element={<StaffPortal />} />
         <Route path="/staff/admin" element={<StaffAdmin />} />

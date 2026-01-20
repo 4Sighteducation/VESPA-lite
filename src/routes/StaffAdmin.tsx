@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 
 type StaffInput = {
@@ -47,6 +48,7 @@ const normalizeRoleType = (value: string) => {
 }
 
 const StaffAdmin = () => {
+  const [searchParams] = useSearchParams()
   const [establishmentId, setEstablishmentId] = useState('')
   const [selectedEstablishmentId, setSelectedEstablishmentId] = useState('')
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
@@ -302,6 +304,13 @@ const StaffAdmin = () => {
   useEffect(() => {
     loadAdminContext()
   }, [])
+
+  // Super admin convenience: allow /staff/admin?establishmentId=... to prefill the target school.
+  useEffect(() => {
+    if (!isSuperAdmin) return
+    const q = (searchParams.get('establishmentId') || '').trim()
+    if (q) setSelectedEstablishmentId(q)
+  }, [isSuperAdmin, searchParams])
 
   return (
     <div className="panel">
