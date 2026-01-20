@@ -32,6 +32,7 @@ export default function StudentAccess() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle')
   const [message, setMessage] = useState('')
 
+  const [email, setEmail] = useState('')
   const [resumeCode, setResumeCode] = useState('')
   const [dob, setDob] = useState('')
   const [resumeStatus, setResumeStatus] = useState<ResumeStatus>({ state: 'idle' })
@@ -66,6 +67,26 @@ export default function StudentAccess() {
       return
     }
     setStatus('idle')
+  }
+
+  const sendMagicLink = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const target = email.trim()
+    if (!target) return
+
+    setStatus('loading')
+    setMessage('')
+    const { error } = await supabase.auth.signInWithOtp({
+      email: target,
+      options: { emailRedirectTo },
+    })
+    if (error) {
+      setStatus('error')
+      setMessage(error.message)
+      return
+    }
+    setStatus('idle')
+    setMessage('Check your email inbox for a sign-in link.')
   }
 
   const logout = async () => {
@@ -150,6 +171,24 @@ export default function StudentAccess() {
         </p>
       </div>
 
+      <div className="card" style={{ maxWidth: 720, marginTop: 14 }}>
+        <h3 style={{ marginBottom: 6 }}>Optional: email magic link</h3>
+        <p style={{ marginTop: 0, color: '#666' }}>
+          No password. We email you a sign-in link. You’ll need access to your inbox on this device (or open your email on the same device).
+        </p>
+        <form className="form" onSubmit={sendMagicLink}>
+          <div className="form-grid">
+            <label className="form-span">
+              School email
+              <input value={email} onChange={(ev) => setEmail(ev.target.value)} type="email" placeholder="name@school.org" required />
+            </label>
+          </div>
+          <button className="secondary" type="submit" disabled={status === 'loading'}>
+            {status === 'loading' ? 'Sending…' : 'Send sign-in link'}
+          </button>
+        </form>
+      </div>
+
       <div style={{ marginTop: 16 }}>
         <p style={{ margin: 0, color: '#666' }}>
           Current session: <strong>{sessionEmail || 'Not signed in'}</strong>
@@ -159,8 +198,6 @@ export default function StudentAccess() {
             Log out
           </button>
           <Link to="/student/access">Reload</Link>
-          <Link to="/student/report/demo">Demo report</Link>
-          <Link to="/student/questionnaire/demo">Demo questionnaire</Link>
         </div>
         {status === 'error' ? <p className="error">Error: {message}</p> : null}
         {status === 'idle' && message ? <p className="success">{message}</p> : null}
