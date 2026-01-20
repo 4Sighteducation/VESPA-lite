@@ -217,16 +217,32 @@ export default function StudentQuestionnaire() {
   }, [currentQuestion])
 
   useEffect(() => {
-    // Lite: for now, we just require a token string
+    // Must be a *resume token* (or demo). If the user has an invite token, they need to register first.
     const t = (token || '').trim()
-    const ok = t.length >= 3
-    const timer = window.setTimeout(() => {
-      if (!ok) {
+    const timer = window.setTimeout(async () => {
+      if (!t) {
         setErrorMessage('Your access link is missing or invalid.')
         setState('not-available')
         return
       }
-      setState('instructions')
+      if (t === 'demo') {
+        setState('instructions')
+        return
+      }
+      try {
+        const r = await fetch(`/api/student-start-context?token=${encodeURIComponent(t)}`)
+        const data = await r.json()
+        if (!r.ok) throw new Error(data?.error || 'Unable to validate access')
+        if (data?.mode !== 'resume') {
+          setErrorMessage('Please complete registration first to get a resume code.')
+          setState('not-available')
+          return
+        }
+        setState('instructions')
+      } catch (e: any) {
+        setErrorMessage(e?.message || 'Unable to validate access.')
+        setState('not-available')
+      }
     }, 450)
     return () => window.clearTimeout(timer)
   }, [token])
@@ -254,11 +270,25 @@ export default function StudentQuestionnaire() {
     }
 
     setState('submitting')
-    window.setTimeout(() => {
-      const calc = calculateVespaScores(responses, questions)
+    const calc = calculateVespaScores(responses, questions)
+    try {
+      const r = await fetch('/api/student-submit-questionnaire', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resumeToken: token,
+          responses,
+          vespaScores: calc.vespaScores,
+        }),
+      })
+      const data = await r.json()
+      if (!r.ok) throw new Error(data?.error || 'Unable to save')
       setCalculated(calc.vespaScores)
       setState('success')
-    }, 650)
+    } catch (e: any) {
+      setErrorMessage(e?.message || 'Unable to save your questionnaire.')
+      setState('error')
+    }
   }
 
   const prev = () => {

@@ -442,23 +442,47 @@ export default function StudentReport() {
   >({})
   const [coachingStatus, setCoachingStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
 
-  const allScores: CycleScore[] = [
-    { cycle: 1, vision: 7, effort: 6, systems: 5, practice: 6, attitude: 8, overall: 6, completion_date: '2026-01-15' },
-  ]
+  const [loadStatus, setLoadStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [loadMessage, setLoadMessage] = useState('Loading report…')
+  const [student, setStudent] = useState<{ name: string; yearGroup?: string; group?: string; establishment?: string; logoUrl?: string }>({
+    name: 'Student',
+    yearGroup: undefined,
+    group: undefined,
+    establishment: undefined,
+    logoUrl: undefined,
+  })
+  const [allScores, setAllScores] = useState<CycleScore[]>([])
 
-  const availableCycles = [1]
-  const currentScores = allScores.find((s) => s.cycle === selectedCycle) || allScores[0]
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        setLoadStatus('loading')
+        setLoadMessage('Loading report…')
+        const t = (token || '').trim()
+        const r = await fetch(`/api/student-report-data?token=${encodeURIComponent(t || 'demo')}`)
+        const data = await r.json()
+        if (!r.ok) throw new Error(data?.error || 'Unable to load report')
+        if (cancelled) return
+        setStudent(data.student || { name: 'Student' })
+        setAllScores(Array.isArray(data.cycles) ? data.cycles : [])
+        setLoadStatus('ready')
+      } catch (e: any) {
+        if (!cancelled) {
+          setLoadStatus('error')
+          setLoadMessage(e?.message || 'Unable to load report')
+          setAllScores([])
+        }
+      }
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [token])
 
-  const student = useMemo(
-    () => ({
-      name: 'Student Name',
-      yearGroup: '12',
-      group: '12A',
-      establishment: 'TESTING SCHOOL 1',
-      logoUrl: 'https://www.vespa.academy/assets/images/full-trimmed-transparent-customcolor-1-832x947.png',
-    }),
-    [],
-  )
+  const availableCycles = useMemo(() => (allScores.length ? allScores.map((s) => s.cycle) : [1]), [allScores])
+  const currentScores = useMemo(() => allScores.find((s) => s.cycle === selectedCycle) || allScores[0] || { cycle: 1, vision: null, effort: null, systems: null, practice: null, attitude: null, overall: null }, [allScores, selectedCycle])
 
   // Rule (as agreed): Year Group < 12 => Level 2; Year Group > 11 => Level 3.
   const inferredLevel = useMemo(() => {
@@ -523,6 +547,10 @@ export default function StudentReport() {
         <AcademicProfileStub />
 
         <div className="report-container">
+          {loadStatus !== 'ready' ? (
+            <div style={{ padding: 18, color: '#666' }}>{loadMessage}</div>
+          ) : null}
+
           <ReportHeader
             student={student}
             availableCycles={availableCycles}
